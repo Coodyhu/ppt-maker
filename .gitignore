@@ -24,6 +24,10 @@ slide-deck/
 # Serena
 .serena/
 
+# AI tool configs
+CLAUDE.md
+AGENTS.md
+
 # Test content
 content-*.md
 test-*.md

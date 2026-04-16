@@ -11,10 +11,31 @@ import {
   mergeToPdf,
   parseTemplate,
   composeFromTemplate,
+  PRESET_NAMES,
 } from "@ppt-maker/core";
 import type { PresetName, Audience } from "@ppt-maker/core";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+
+const VALID_STYLES = new Set<string>(PRESET_NAMES);
+const VALID_AUDIENCES = new Set<string>(["general", "beginners", "experts", "executives"]);
+
+function validateStyle(value: unknown): PresetName {
+  const s = typeof value === "string" ? value : "blueprint";
+  return VALID_STYLES.has(s) ? (s as PresetName) : "blueprint";
+}
+
+function validateAudience(value: unknown): Audience {
+  const a = typeof value === "string" ? value : "general";
+  return VALID_AUDIENCES.has(a) ? (a as Audience) : "general";
+}
+
+function validateSlideCount(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  const n = typeof value === "number" ? value : parseInt(String(value), 10);
+  if (Number.isNaN(n) || n < 1 || n > 50) return undefined;
+  return n;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,10 +51,9 @@ export async function POST(request: NextRequest) {
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       source = formData.get("source") as string ?? "";
-      style = (formData.get("style") as PresetName) ?? "blueprint";
-      audience = (formData.get("audience") as Audience) ?? "general";
-      const sc = formData.get("slideCount") as string;
-      slideCount = sc ? parseInt(sc, 10) : undefined;
+      style = validateStyle(formData.get("style"));
+      audience = validateAudience(formData.get("audience"));
+      slideCount = validateSlideCount(formData.get("slideCount"));
       apiKey = (formData.get("apiKey") as string) || undefined;
       outlineOnly = formData.get("outlineOnly") === "true";
 
@@ -45,9 +65,9 @@ export async function POST(request: NextRequest) {
     } else {
       const body = await request.json();
       source = body.source ?? "";
-      style = body.style ?? "blueprint";
-      audience = body.audience ?? "general";
-      slideCount = body.slideCount;
+      style = validateStyle(body.style);
+      audience = validateAudience(body.audience);
+      slideCount = validateSlideCount(body.slideCount);
       apiKey = body.apiKey;
       outlineOnly = body.outlineOnly ?? false;
     }
@@ -149,15 +169,20 @@ export async function POST(request: NextRequest) {
     files.push(...generatedImages);
 
     // Merge
+    const warnings: string[] = [];
     try {
       const pptxPath = await mergeToPptx(outputDir);
       files.push(pptxPath);
-    } catch {}
+    } catch (e) {
+      warnings.push(`PPTX merge failed: ${e instanceof Error ? e.message : "unknown error"}`);
+    }
 
     try {
       const pdfPath = await mergeToPdf(outputDir);
       files.push(pdfPath);
-    } catch {}
+    } catch (e) {
+      warnings.push(`PDF merge failed: ${e instanceof Error ? e.message : "unknown error"}`);
+    }
 
     return NextResponse.json({
       outputDir,
@@ -167,11 +192,11 @@ export async function POST(request: NextRequest) {
         slideCount: outline.slideCount,
         style: outline.style.preset,
       },
+      ...(warnings.length > 0 && { warnings }),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message } },
+      { error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred" } },
       { status: 500 },
     );
   }
