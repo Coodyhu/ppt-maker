@@ -1,0 +1,19 @@
+{
+  "name": "@ppt-maker/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "ppt-maker": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun"
+  },
+  "dependencies": {
+    "@ppt-maker/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest"
+  }
+}
