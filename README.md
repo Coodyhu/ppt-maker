@@ -59,6 +59,16 @@ cp .env.example .env
 
 Get an API key at [console.anthropic.com](https://console.anthropic.com).
 
+## Editable PPTX (No AI Needed)
+
+You can also generate fully editable PPTX files with code — no API key required:
+
+```bash
+bun run examples/editable-pptx.ts
+```
+
+See `examples/editable-pptx.ts` for a complete example using [pptxgenjs](https://github.com/gitbrent/PptxGenJS).
+
 ## Style Presets
 
 | Preset | Best For |
